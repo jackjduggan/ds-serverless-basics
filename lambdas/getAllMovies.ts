@@ -1,6 +1,6 @@
 import { Handler } from "aws-lambda";
 
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
 
 const ddbDocClient = createDDbDocClient();
@@ -8,36 +8,37 @@ const ddbDocClient = createDDbDocClient();
 export const handler: Handler = async (event, context) => {
   try {
     console.log("Event: ", event);
-    const parameters = event?.queryStringParameters;
-    const movieId = parameters ? parseInt(parameters.movieId) : undefined;
+    // const parameters = event?.queryStringParameters;
+    // const movieId = parameters ? parseInt(parameters.movieId) : undefined;
 
-    if (!movieId) {
-      return {
-        statusCode: 404,
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ Message: "Missing movie Id" }),
-      };
-    }
+    // if (!movieId) {
+    //   return {
+    //     statusCode: 404,
+    //     headers: {
+    //       "content-type": "application/json",
+    //     },
+    //     body: JSON.stringify({ Message: "Missing movie Id" }),
+    //   };
+    // }
     const commandOutput = await ddbDocClient.send(
-      new GetCommand({
+      new ScanCommand({
         TableName: process.env.TABLE_NAME,
-        Key: { movieId: movieId },
+        // Key: { movieId: movieId },
       })
     );
-    console.log('GetCommand response: ', commandOutput)  // NEW
-    if (!commandOutput.Item) {
-      return {
+    //console.log('GetCommand response: ', commandOutput)  // NEW
+    const allMovies = commandOutput.Items; // originally I didn't have this statement and just called
+    if (!allMovies) {                      //  commandOutput.Items wherever there's "allMovies", but it didn't work.
+      return {                             // Converting to allMovies const variable fixed the error and URL worked.
         statusCode: 404,
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ Message: "Invalid movie Id" }),
+        body: JSON.stringify({ Message: "No movies" }),
       };
     }
     const body = {
-      data: commandOutput.Item,
+      data: allMovies,
     };
 
     // Return Response
